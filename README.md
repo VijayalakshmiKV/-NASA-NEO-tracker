@@ -1,2 +1,2 @@
 # -NASA-NEO-tracker
-Track and explore NASA's Near-Earth Objects with real-time API data, SQL analytics, and an interactive Streamlit dashboard.
+This project fetches real-time Near-Earth Object (NEO) data from NASA's public API, processes and stores it in a structured MySQL database, and presents it through an interactive Streamlit dashboard. Users can explore asteroid approach patterns, analyze velocity and distance metrics, and apply advanced filters (like date, diameter, velocity, and hazardous status) without writing any code. The dashboard empowers both technical and non-technical users to visualize asteroid threats, study astronomical trends, and derive scientific insights from over 10,000 records.
