@@ -41,38 +41,92 @@ selected_query = st.sidebar.selectbox("Choose a predefined SQL query", query_opt
 
 # ------------------ Query Map ------------------ #
 sql_queries = {
-    "1. Count asteroid approaches":
-        "SELECT name, COUNT(*) as approach_count FROM asteroids a JOIN close_approach c ON a.id = c.neo_reference_id GROUP BY name",
-    "2. Avg velocity per asteroid":
-        "SELECT name, ROUND(AVG(relative_velocity_kmph), 2) AS avg_velocity FROM asteroids a JOIN close_approach c ON a.id = c.neo_reference_id GROUP BY name",
-    "3. Top 10 fastest asteroids":
-        "SELECT name, MAX(relative_velocity_kmph) AS max_velocity FROM asteroids a JOIN close_approach c ON a.id = c.neo_reference_id GROUP BY name ORDER BY max_velocity DESC LIMIT 10",
-    "4. Hazardous asteroids with >3 approaches":
-        "SELECT name, COUNT(*) as approach_count FROM asteroids a JOIN close_approach c ON a.id = c.neo_reference_id WHERE is_potentially_hazardous_asteroid = TRUE GROUP BY name HAVING approach_count > 3",
-    "5. Month with most approaches":
-        "SELECT MONTH(close_approach_date) AS month, COUNT(*) AS count FROM close_approach GROUP BY month ORDER BY count DESC LIMIT 1",
-    "6. Fastest approach speed":
-        "SELECT name, MAX(relative_velocity_kmph) AS max_speed FROM asteroids a JOIN close_approach c ON a.id = c.neo_reference_id GROUP BY name ORDER BY max_speed DESC LIMIT 1",
-    "7. Sort by max estimated diameter":
-        "SELECT name, estimated_diameter_max_km FROM asteroids ORDER BY estimated_diameter_max_km DESC",
-    "8. Closest approach trend":
-        "SELECT name, close_approach_date, miss_distance_km FROM asteroids a JOIN close_approach c ON a.id = c.neo_reference_id ORDER BY name, close_approach_date ASC",
-    "9. Name + date + closest distance":
-        "SELECT name, close_approach_date, miss_distance_km FROM asteroids a JOIN close_approach c ON a.id = c.neo_reference_id ORDER BY miss_distance_km ASC",
-    "10. Asteroids > 50,000 km/h":
-        "SELECT name, relative_velocity_kmph FROM asteroids a JOIN close_approach c ON a.id = c.neo_reference_id WHERE relative_velocity_kmph > 50000",
-    "11. Monthly approach count":
-        "SELECT MONTH(close_approach_date) AS month, COUNT(*) AS count FROM close_approach GROUP BY month ORDER BY month",
-    "12. Brightest asteroid (lowest mag)":
-        "SELECT name, MIN(absolute_magnitude_h) AS brightness FROM asteroids GROUP BY name ORDER BY brightness ASC LIMIT 1",
-    "13. Hazardous vs Non-hazardous":
-        "SELECT is_potentially_hazardous_asteroid, COUNT(*) as count FROM asteroids GROUP BY is_potentially_hazardous_asteroid",
-    "14. Closer than 1 LD":
-        "SELECT name, close_approach_date, miss_distance_lunar FROM asteroids a JOIN close_approach c ON a.id = c.neo_reference_id WHERE miss_distance_lunar < 1",
-    "15. Within 0.05 AU":
-        "SELECT name, close_approach_date, astronomical FROM asteroids a JOIN close_approach c ON a.id = c.neo_reference_id WHERE astronomical < 0.05"
-}
+    "1. Count how many times each asteroid has approached Earth":
+        "SELECT neo_reference_id, COUNT(*) AS approach_count FROM close_approach GROUP BY neo_reference_id;",
 
+    "2. Average velocity of each asteroid over multiple approaches":
+        "SELECT neo_reference_id, AVG(relative_velocity_kmph) AS avg_velocity FROM close_approach GROUP BY neo_reference_id;",
+
+    "3. List top 10 fastest asteroids":
+        "SELECT neo_reference_id, relative_velocity_kmph FROM close_approach ORDER BY relative_velocity_kmph DESC LIMIT 10;",
+
+    "4. Find potentially hazardous asteroids that have approached Earth more than 3 times":
+        """SELECT a.name, COUNT(*) AS times_approached
+           FROM asteroids a
+           JOIN close_approach c ON a.id = c.neo_reference_id
+           WHERE a.is_potentially_hazardous_asteroid = TRUE
+           GROUP BY a.id
+           HAVING times_approached > 3;""",
+
+    "5. Find the month with the most asteroid approaches":
+        "SELECT MONTH(close_approach_date) AS month, COUNT(*) AS total_approaches FROM close_approach GROUP BY MONTH(close_approach_date) ORDER BY total_approaches DESC;",
+
+    "6. Get the asteroid with the fastest ever approach speed":
+        "SELECT neo_reference_id, MAX(relative_velocity_kmph) AS max_velocity FROM close_approach;",
+
+    "7. Sort asteroids by maximum estimated diameter (descending)":
+        "SELECT name, estimated_diameter_max_km FROM asteroids ORDER BY estimated_diameter_max_km DESC;",
+
+    "8. Asteroid whose closest approach is getting nearer over time":
+        "SELECT neo_reference_id, close_approach_date, miss_distance_km FROM close_approach ORDER BY neo_reference_id, close_approach_date;",
+
+    "9. Display name, date, and distance of each asteroid's closest approach":
+        """SELECT a.name, c.close_approach_date, c.miss_distance_km
+           FROM asteroids a
+           JOIN close_approach c ON a.id = c.neo_reference_id
+           ORDER BY c.miss_distance_km ASC;""",
+
+    "10. Asteroids with velocity > 50,000 km/h":
+        """SELECT a.name, c.relative_velocity_kmph
+           FROM asteroids a
+           JOIN close_approach c ON a.id = c.neo_reference_id
+           WHERE c.relative_velocity_kmph > 50000;""",
+
+    "11. Count how many approaches happened per month":
+        "SELECT MONTH(close_approach_date) AS month, COUNT(*) AS count FROM close_approach GROUP BY MONTH(close_approach_date);",
+
+    "12. Asteroid with the highest brightness (lowest magnitude)":
+        "SELECT name, absolute_magnitude_h FROM asteroids ORDER BY absolute_magnitude_h ASC LIMIT 1;",
+
+    "13. Number of hazardous vs non-hazardous asteroids":
+        "SELECT is_potentially_hazardous_asteroid, COUNT(*) AS count FROM asteroids GROUP BY is_potentially_hazardous_asteroid;",
+
+    "14. Asteroids that passed closer than the Moon (<1 LD)":
+        """SELECT a.name, c.close_approach_date, c.miss_distance_lunar
+           FROM asteroids a
+           JOIN close_approach c ON a.id = c.neo_reference_id
+           WHERE c.miss_distance_lunar < 1;""",
+
+    "15. Asteroids that came within 0.05 AU":
+        """SELECT a.name, c.close_approach_date, c.astronomical
+           FROM asteroids a
+           JOIN close_approach c ON a.id = c.neo_reference_id
+           WHERE c.astronomical < 0.05;""",
+
+    "16. Asteroids with multiple close approaches on different dates":
+        """SELECT neo_reference_id, COUNT(DISTINCT close_approach_date) AS approach_count
+           FROM close_approach
+           GROUP BY neo_reference_id
+           HAVING approach_count > 1
+           ORDER BY approach_count DESC;""",
+
+    "17. Average estimated diameter of hazardous asteroids":
+        """SELECT AVG(estimated_diameter_min_km + estimated_diameter_max_km)/2 AS avg_diameter_km
+           FROM asteroids
+           WHERE is_potentially_hazardous_asteroid = TRUE;""",
+
+    "18. Top 5 largest hazardous asteroids by max diameter":
+        "SELECT name, estimated_diameter_max_km FROM asteroids WHERE is_potentially_hazardous_asteroid = TRUE ORDER BY estimated_diameter_max_km DESC LIMIT 5;",
+
+    "19. Number of asteroid passes per orbiting body":
+        "SELECT orbiting_body, COUNT(*) AS total_passes FROM close_approach GROUP BY orbiting_body ORDER BY total_passes DESC;",
+
+    "20. Hazardous asteroids that came within 0.01 AU":
+        """SELECT a.name, c.close_approach_date, c.astronomical
+           FROM asteroids a
+           JOIN close_approach c ON a.id = c.neo_reference_id
+           WHERE c.astronomical < 0.01 AND a.is_potentially_hazardous_asteroid = TRUE;"""
+}
 # ------------------ Predefined Query Execution ------------------ #
 if selected_query != "Custom Filter (All Fields)":
     try:
